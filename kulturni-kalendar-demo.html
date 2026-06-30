@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kulturni kalendar</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink:        #1a1916;
+  --ink-2:      #6b6960;
+  --ink-3:      #a8a59e;
+  --paper:      #fbfaf7;
+  --paper-2:    #f1eee7;
+  --paper-3:    #e3dfd6;
+  --rule:       #d8d3c8;
+  --rule-strong:#bdb7a9;
+  --accent:     #c94f2a;
+  --accent-bg:  #fdf0ec;
+  --green:      #2e6e4e;
+  --green-bg:   #eaf4ef;
+  --blue:       #1e4f8c;
+  --blue-bg:    #eaf0fa;
+  --gold:       #8a6c1e;
+  --gold-bg:    #faf4e2;
+  --purple:     #5c3d8f;
+  --purple-bg:  #f2edfb;
+  --radius:     4px;
+  --font-sans:  -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+}
+
+.cc-widget {
+  font-family: var(--font-sans);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.5;
+  border: 1px solid var(--rule-strong);
+  border-radius: 8px;
+  padding: 1.25rem;
+  max-width: 100%;
+}
+
+.cc-widget * { box-sizing: border-box; }
+
+/* ── Tabs (compact, replaces header) ─────────────────────── */
+.cc-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0;
+}
+.cc-tab {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.12s;
+  letter-spacing: 0.02em;
+}
+.cc-tab:hover { color: var(--ink); }
+.cc-tab.active { color: var(--ink); border-bottom-color: var(--accent); }
+
+/* ── Layout: table + admin side by side ──────────────────── */
+.cc-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 1.25rem;
+  align-items: start;
+}
+.cc-layout.admin-hidden { grid-template-columns: 1fr; }
+
+/* ── Filter bar ───────────────────────────────────────────── */
+.cc-filter-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.cc-filter-bar input[type="text"] {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: white;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--ink);
+  flex: 1;
+  min-width: 120px;
+}
+.cc-filter-bar input[type="text"]:focus { outline: none; border-color: var(--ink-2); }
+.cc-filter-bar input[type="text"]::placeholder { color: var(--ink-3); }
+
+.cc-filter-bar select {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: white;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.cc-chips { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.cc-chip {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: 20px;
+  background: white;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.cc-chip:hover { border-color: var(--ink-2); color: var(--ink); }
+.cc-chip.active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+/* ── Sort row ─────────────────────────────────────────────── */
+.cc-sort-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-wrap: wrap;
+}
+.cc-sort-pill {
+  padding: 2px 9px;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  cursor: pointer;
+  color: var(--ink-3);
+  background: none;
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.12s;
+}
+.cc-sort-pill:hover { color: var(--ink-2); border-color: var(--rule); }
+.cc-sort-pill.active { color: var(--ink); border-color: var(--ink-2); background: white; }
+
+/* ── Multi-day section ────────────────────────────────────── */
+.cc-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.cc-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.cc-section-rule { flex: 1; height: 1px; background: var(--rule); }
+
+.cc-multiday-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 1rem;
+}
+.cc-multiday-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  min-width: 200px;
+  flex: 1 1 200px;
+  max-width: 340px;
+}
+.cc-multiday-body { flex: 1; min-width: 0; }
+.cc-multiday-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cc-multiday-meta { font-size: 10.5px; color: var(--ink-2); margin-top: 2px; }
+.cc-multiday-right { text-align: right; flex-shrink: 0; }
+.cc-multiday-range { font-size: 10.5px; font-weight: 700; color: var(--gold); white-space: nowrap; }
+.cc-multiday-price { font-size: 11px; font-weight: 600; color: var(--ink-2); margin-top: 1px; }
+.cc-multiday-price.free { color: var(--green); }
+
+/* ── Table ────────────────────────────────────────────────── */
+.cc-table-scroll {
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+  overflow-x: auto;
+}
+.cc-table { width: 100%; border-collapse: collapse; }
+.cc-table thead th {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 8px 10px;
+  text-align: left;
+  background: var(--paper-2);
+  border-bottom: 1px solid var(--rule-strong);
+  white-space: nowrap;
+}
+.cc-table tbody tr { border-bottom: 1px solid var(--rule); transition: background 0.1s; }
+.cc-table tbody tr:last-child { border-bottom: none; }
+.cc-table tbody tr:hover { background: var(--paper-2); }
+.cc-table tbody td { padding: 9px 10px; vertical-align: middle; border-right: 1px solid var(--rule); }
+.cc-table tbody td:last-child { border-right: none; }
+.cc-table thead th:not(:last-child) { border-right: 1px solid var(--rule-strong); }
+
+.cc-td-date { white-space: nowrap; color: var(--ink-2); font-size: 12px; min-width: 70px; }
+.cc-td-date .day { font-weight: 700; color: var(--ink); font-size: 12.5px; }
+.cc-td-date .time { font-size: 10.5px; color: var(--ink-3); margin-top: 1px; }
+.cc-td-title { min-width: 140px; }
+.cc-td-title .title { font-size: 13.5px; font-weight: 600; color: var(--ink); display: block; line-height: 1.3; }
+.cc-td-title .sub { font-size: 10.5px; color: var(--ink-3); margin-top: 2px; display: block; }
+.cc-td-cat { white-space: nowrap; }
+.cc-td-venue { font-size: 12px; color: var(--ink-2); min-width: 100px; }
+.cc-td-price { white-space: nowrap; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.cc-td-price.free { color: var(--green); }
+.cc-td-link { text-align: center; }
+.cc-td-link a { color: var(--ink-3); font-size: 13px; transition: color 0.12s; text-decoration: none; }
+.cc-td-link a:hover { color: var(--accent); }
+
+/* ── Badges ───────────────────────────────────────────────── */
+.cc-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.cc-badge-concert    { background: var(--accent-bg); color: var(--accent); }
+.cc-badge-film       { background: var(--blue-bg);   color: var(--blue); }
+.cc-badge-kazaliste   { background: var(--purple-bg); color: var(--purple); }
+.cc-badge-radionica   { background: var(--green-bg);  color: var(--green); }
+.cc-badge-izlozba     { background: var(--gold-bg);   color: var(--gold); }
+.cc-badge-ostalo      { background: var(--paper-3);   color: var(--ink-2); }
+
+/* ── Empty state ──────────────────────────────────────────── */
+.cc-empty { text-align: center; padding: 2.5rem 1rem; color: var(--ink-3); }
+.cc-empty-icon { font-size: 1.75rem; margin-bottom: 0.5rem; }
+.cc-empty p { font-size: 12.5px; max-width: 240px; margin: 0 auto; line-height: 1.5; }
+
+/* ── Admin panel ──────────────────────────────────────────── */
+.cc-admin-card {
+  background: white;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 1rem;
+}
+.cc-admin-card h3 { font-size: 12.5px; font-weight: 700; margin-bottom: 0.85rem; color: var(--ink); text-transform: uppercase; letter-spacing: 0.03em; }
+
+.cc-editing-banner {
+  display: none;
+  background: var(--accent-bg);
+  border: 1px solid #f0c4b8;
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  align-items: center;
+  gap: 6px;
+}
+.cc-editing-banner.visible { display: flex; }
+.cc-editing-banner button {
+  background: none; border: none; cursor: pointer; color: var(--accent);
+  font-size: 11px; font-weight: 700; padding: 0; text-decoration: underline; margin-left: auto;
+}
+
+.cc-form-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 9px; }
+.cc-form-group label { font-size: 10px; font-weight: 700; color: var(--ink-2); letter-spacing: 0.03em; text-transform: uppercase; }
+.cc-form-group label .opt { font-weight: 400; color: var(--ink-3); text-transform: none; letter-spacing: 0; }
+.cc-form-group input,
+.cc-form-group select,
+.cc-form-group textarea {
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--ink);
+  width: 100%;
+}
+.cc-form-group input:focus,
+.cc-form-group select:focus,
+.cc-form-group textarea:focus { outline: none; border-color: var(--ink-2); background: white; }
+.cc-form-group input::placeholder,
+.cc-form-group textarea::placeholder { color: var(--ink-3); }
+.cc-form-group textarea { height: 50px; padding: 7px 9px; resize: vertical; }
+
+.cc-date-range-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: end; margin-bottom: 9px; }
+.cc-date-sep { font-size: 11px; color: var(--ink-3); text-align: center; padding-bottom: 8px; }
+.cc-date-hint { font-size: 10.5px; color: var(--ink-3); margin-top: -4px; margin-bottom: 9px; min-height: 13px; }
+
+.cc-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.cc-btn-row { display: flex; gap: 6px; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--rule); }
+.cc-btn { height: 32px; padding: 0 12px; border-radius: var(--radius); font-family: var(--font-sans); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.12s; white-space: nowrap; }
+.cc-btn-ghost { border: 1px solid var(--rule); background: none; color: var(--ink-2); }
+.cc-btn-ghost:hover { border-color: var(--ink-2); color: var(--ink); }
+.cc-btn-primary { border: 1px solid var(--ink); background: var(--ink); color: var(--paper); margin-left: auto; }
+.cc-btn-primary:hover { background: #2e2d29; }
+
+.cc-admin-list-header { display: flex; align-items: baseline; justify-content: space-between; margin: 1rem 0 0.5rem; }
+.cc-admin-list-header h3 { font-size: 12.5px; font-weight: 700; color: var(--ink); text-transform: uppercase; letter-spacing: 0.03em; }
+.cc-admin-count { font-size: 11px; color: var(--ink-3); }
+
+.cc-admin-event-list { display: flex; flex-direction: column; gap: 5px; max-height: 280px; overflow-y: auto; }
+.cc-admin-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: white;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 7px 9px;
+}
+.cc-admin-row.editing { border-color: var(--accent); background: var(--accent-bg); }
+.cc-admin-row.is-multiday { border-left: 3px solid var(--gold); }
+.cc-admin-row-date { min-width: 60px; font-size: 10px; font-weight: 700; color: var(--ink-2); flex-shrink: 0; }
+.cc-admin-row-title { flex: 1; font-size: 12px; font-weight: 500; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-admin-row-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.cc-icon-btn { width: 24px; height: 24px; border-radius: var(--radius); border: 1px solid var(--rule); background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--ink-2); }
+.cc-icon-btn:hover { border-color: var(--ink-2); color: var(--ink); }
+.cc-icon-btn.del:hover { border-color: #f0c4b8; color: var(--accent); background: var(--accent-bg); }
+
+/* ── Toast ────────────────────────────────────────────────── */
+.cc-toast {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 7px 16px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  z-index: 1000;
+  white-space: nowrap;
+}
+.cc-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .cc-layout { grid-template-columns: 1fr; }
+  .cc-date-range-row { grid-template-columns: 1fr; }
+  .cc-date-sep { display: none; }
+}
+</style>
+</head>
+<body style="margin:0;padding:16px;background:#e8e5dd;font-family:-apple-system,sans-serif">
+
+<div class="cc-widget" id="cc-widget" style="position:relative">
+
+  <div class="cc-tabs">
+    <button class="cc-tab active" id="cc-tab-public" onclick="ccSwitchPanel('public')">Događaji</button>
+    <button class="cc-tab" id="cc-tab-admin" onclick="ccSwitchPanel('admin')">Uređivanje</button>
+  </div>
+
+  <!-- ══ PUBLIC PANEL ══ -->
+  <div id="cc-panel-public">
+    <div class="cc-layout admin-hidden">
+      <div>
+        <div class="cc-filter-bar">
+          <input type="text" id="cc-search" placeholder="Pretraži događaje, lokacije, žanrove…" oninput="ccRefresh()">
+          <select id="cc-filter-price" onchange="ccRefresh()">
+            <option value="">Sve cijene</option>
+            <option value="free">Besplatno</option>
+            <option value="paid">Plaćeno</option>
+          </select>
+          <select id="cc-filter-when" onchange="ccRefresh()">
+            <option value="">Svi datumi</option>
+            <option value="today">Danas</option>
+            <option value="week">Ovaj tjedan</option>
+            <option value="month">Ovaj mjesec</option>
+          </select>
+        </div>
+
+        <div class="cc-chips" id="cc-cat-chips" style="margin-bottom:0.75rem">
+          <button class="cc-chip active" data-cat="">Sve</button>
+          <button class="cc-chip" data-cat="koncert">Koncert</button>
+          <button class="cc-chip" data-cat="film">Film</button>
+          <button class="cc-chip" data-cat="kazaliste">Kazalište</button>
+          <button class="cc-chip" data-cat="radionica">Radionica</button>
+          <button class="cc-chip" data-cat="izlozba">Izložba</button>
+          <button class="cc-chip" data-cat="ostalo">Ostalo</button>
+        </div>
+
+        <div class="cc-sort-row" id="cc-sort-row">
+          Sortiraj:
+          <button class="cc-sort-pill active" data-sort="date">Datum <span id="cc-arr-date">▲</span></button>
+          <button class="cc-sort-pill" data-sort="title">Naziv <span id="cc-arr-title">▲</span></button>
+          <button class="cc-sort-pill" data-sort="category">Kategorija <span id="cc-arr-category">▲</span></button>
+          <button class="cc-sort-pill" data-sort="price">Cijena <span id="cc-arr-price">▲</span></button>
+        </div>
+
+        <div id="cc-multiday-wrap" style="display:none">
+          <div class="cc-section-header">
+            <span class="cc-section-label">Višednevni događaji</span>
+            <div class="cc-section-rule"></div>
+          </div>
+          <div class="cc-multiday-strip" id="cc-multiday"></div>
+        </div>
+
+        <div id="cc-daily-label" class="cc-section-header" style="display:none">
+          <span class="cc-section-label">Jednodnevni događaji</span>
+          <div class="cc-section-rule"></div>
+        </div>
+
+        <div class="cc-table-scroll">
+          <table class="cc-table">
+            <thead>
+              <tr>
+                <th>Datum</th>
+                <th>Događaj</th>
+                <th>Kategorija</th>
+                <th>Lokacija</th>
+                <th style="text-align:right">Cijena</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="cc-tbody"></tbody>
+          </table>
+        </div>
+        <div class="cc-empty" id="cc-empty-table" style="display:none">
+          <div class="cc-empty-icon">🎭</div>
+          <p>Nema događaja koji odgovaraju filterima.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ADMIN PANEL ══ -->
+  <div id="cc-panel-admin" style="display:none">
+    <div class="cc-layout">
+      <div>
+        <div class="cc-admin-list-header" style="margin-top:0">
+          <h3>Svi događaji</h3>
+          <span class="cc-admin-count" id="cc-admin-count"></span>
+        </div>
+        <div class="cc-admin-event-list" id="cc-admin-list"></div>
+        <div class="cc-empty" id="cc-empty-table-a" style="display:none">
+          <div class="cc-empty-icon">🎭</div>
+          <p>Nema unesenih događaja.</p>
+        </div>
+      </div>
+
+      <div>
+        <div class="cc-admin-card">
+          <h3 id="cc-form-heading">Dodaj događaj</h3>
+          <div class="cc-editing-banner" id="cc-editing-banner">
+            Uređivanje događaja
+            <button onclick="ccCancelEdit()">Odustani</button>
+          </div>
+
+          <div class="cc-form-group">
+            <label for="cc-f-title">Naziv događaja *</label>
+            <input id="cc-f-title" type="text" placeholder="npr. Naziv događaja 1">
+          </div>
+
+          <div class="cc-form-row">
+            <div class="cc-form-group">
+              <label for="cc-f-cat">Kategorija *</label>
+              <select id="cc-f-cat">
+                <option value="koncert">Koncert</option>
+                <option value="film">Film</option>
+                <option value="kazaliste">Kazalište</option>
+                <option value="radionica">Radionica</option>
+                <option value="izlozba">Izložba</option>
+                <option value="ostalo">Ostalo</option>
+              </select>
+            </div>
+            <div class="cc-form-group">
+              <label for="cc-f-genre">Žanr / podvrsta</label>
+              <input id="cc-f-genre" type="text" placeholder="npr. Jazz, Drama…">
+            </div>
+          </div>
+
+          <div class="cc-date-range-row">
+            <div class="cc-form-group" style="margin-bottom:0">
+              <label for="cc-f-date-start">Datum početka *</label>
+              <input id="cc-f-date-start" type="date" onchange="ccOnDateChange()">
+            </div>
+            <div class="cc-date-sep">→</div>
+            <div class="cc-form-group" style="margin-bottom:0">
+              <label for="cc-f-date-end">Datum kraja <span class="opt">(opcionalno)</span></label>
+              <input id="cc-f-date-end" type="date" onchange="ccOnDateChange()">
+            </div>
+          </div>
+          <div class="cc-date-hint" id="cc-date-hint"></div>
+
+          <div class="cc-form-group">
+            <label for="cc-f-time">Vrijeme <span class="opt">(za jednodnevni ili dnevno otvorenje)</span></label>
+            <input id="cc-f-time" type="time">
+          </div>
+
+          <div class="cc-form-group">
+            <label for="cc-f-venue">Lokacija</label>
+            <input id="cc-f-venue" type="text" placeholder="npr. Lokacija 2">
+          </div>
+
+          <div class="cc-form-row">
+            <div class="cc-form-group">
+              <label for="cc-f-price">Cijena (€) — 0 za besplatno</label>
+              <input id="cc-f-price" type="number" min="0" step="0.5" placeholder="0">
+            </div>
+            <div class="cc-form-group">
+              <label for="cc-f-link">Link za ulaznice / info</label>
+              <input id="cc-f-link" type="url" placeholder="https://…">
+            </div>
+          </div>
+
+          <div class="cc-form-group">
+            <label for="cc-f-notes">Napomena <span class="opt">(opcionalno)</span></label>
+            <textarea id="cc-f-notes" placeholder="Dodatne informacije…"></textarea>
+          </div>
+
+          <div class="cc-btn-row">
+            <button class="cc-btn cc-btn-ghost" onclick="ccResetForm()">Obriši</button>
+            <button class="cc-btn cc-btn-primary" onclick="ccSaveEvent()">Spremi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cc-toast" id="cc-toast"></div>
+</div>
+
+<script>
+(function(){
+
+/* ── Data ────────────────────────────────────────────────── */
+const STORAGE_KEY = 'kulturni-kalendar-v3';
+
+const SAMPLE = [
+  {id:1,  title:'Naziv događaja 1',  category:'koncert',   genre:'Žanr A', dateStart:'2025-07-04', dateEnd:'',           time:'20:00', venue:'Lokacija 1', price:13, link:'', notes:''},
+  {id:2,  title:'Naziv događaja 2',  category:'koncert',   genre:'Žanr B', dateStart:'2025-07-05', dateEnd:'2025-07-07', time:'17:00', venue:'Lokacija 2', price:0,  link:'', notes:'Napomena uz događaj'},
+  {id:3,  title:'Naziv događaja 3',  category:'film',      genre:'Žanr C', dateStart:'2025-07-06', dateEnd:'',           time:'20:30', venue:'Lokacija 3', price:9,  link:'', notes:''},
+  {id:4,  title:'Naziv događaja 4',  category:'film',      genre:'Žanr D', dateStart:'2025-07-07', dateEnd:'',           time:'18:00', venue:'Lokacija 4', price:5,  link:'', notes:''},
+  {id:5,  title:'Naziv događaja 5',  category:'kazaliste', genre:'Žanr E', dateStart:'2025-07-08', dateEnd:'',           time:'19:30', venue:'Lokacija 5', price:20, link:'', notes:''},
+  {id:6,  title:'Naziv događaja 6',  category:'radionica', genre:'Žanr F', dateStart:'2025-07-09', dateEnd:'',           time:'11:00', venue:'Lokacija 6', price:25, link:'https://example.com', notes:''},
+  {id:7,  title:'Naziv događaja 7',  category:'izlozba',   genre:'Žanr G', dateStart:'2025-07-02', dateEnd:'2025-07-31', time:'10:00', venue:'Lokacija 7', price:0,  link:'', notes:'Otvoreno uto–ned, 10–20h'},
+  {id:8,  title:'Naziv događaja 8',  category:'koncert',   genre:'Žanr H', dateStart:'2025-07-11', dateEnd:'',           time:'20:00', venue:'Lokacija 8', price:35, link:'', notes:''},
+  {id:9,  title:'Naziv događaja 9',  category:'ostalo',    genre:'Žanr I', dateStart:'2025-07-01', dateEnd:'2025-07-31', time:'',      venue:'Lokacija 9', price:0,  link:'', notes:'Program se mijenja svaki dan'},
+];
+
+let events = [];
+let nextId = 1;
+let editId = null;
+let sortCol = 'date';
+let sortDir = 1;
+let filterCat = '';
+let filterPrice = '';
+let filterWhen = '';
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      events = d.events || [];
+      nextId = d.nextId || (events.length ? Math.max(...events.map(e=>e.id))+1 : 1);
+    } else {
+      events = SAMPLE.map(e=>({...e}));
+      nextId = 100;
+      save();
+    }
+  } catch(e) {
+    events = SAMPLE.map(e=>({...e}));
+    nextId = 100;
+  }
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({events, nextId})); } catch(e) {}
+}
+
+/* ── Helpers ─────────────────────────────────────────────── */
+const MONTH_HR = ['sij','velj','ožu','tra','svi','lip','srp','kol','ruj','lis','stu','pro'];
+const CAT_LABEL = {koncert:'Koncert', film:'Film', kazaliste:'Kazalište', radionica:'Radionica', izlozba:'Izložba', ostalo:'Ostalo'};
+
+function toDate(s) { return s ? new Date(s + 'T00:00:00') : null; }
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function isMultiDay(e) { return e.dateEnd && e.dateEnd !== e.dateStart && e.dateEnd > e.dateStart; }
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const [,m,day] = d.split('-').map(Number);
+  return `${day}. ${MONTH_HR[m-1]}`;
+}
+function fmtRange(e) {
+  if (!isMultiDay(e)) return fmtDate(e.dateStart);
+  const [,ms,ds] = e.dateStart.split('-').map(Number);
+  const [,me,de] = e.dateEnd.split('-').map(Number);
+  if (ms === me) return `${ds}.–${de}. ${MONTH_HR[ms-1]}`;
+  return `${ds}. ${MONTH_HR[ms-1]} – ${de}. ${MONTH_HR[me-1]}`;
+}
+function fmtPrice(p) { return (!p || parseFloat(p)===0) ? 'Besplatno' : `${parseFloat(p)}€`; }
+function isFree(p) { return !p || parseFloat(p)===0; }
+function badge(cat) { return `<span class="cc-badge cc-badge-${cat}">${CAT_LABEL[cat]||cat}</span>`; }
+
+/* ── Filtering ───────────────────────────────────────────── */
+function eventOverlaps(e, rangeStart, rangeEnd) {
+  const es = toDate(e.dateStart);
+  const ee = toDate(e.dateEnd || e.dateStart);
+  return es <= rangeEnd && ee >= rangeStart;
+}
+function getFiltered() {
+  const q = (document.getElementById('cc-search')?.value || '').toLowerCase();
+  const now = todayStr();
+  const todayDate = toDate(now);
+  const weekEnd  = new Date(todayDate); weekEnd.setDate(weekEnd.getDate()+6);
+  const monthEnd = new Date(todayDate); monthEnd.setMonth(monthEnd.getMonth()+1); monthEnd.setDate(monthEnd.getDate()-1);
+
+  return events.filter(e => {
+    if (q) {
+      const hay = `${e.title} ${e.venue} ${e.genre} ${e.notes}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (filterCat && e.category !== filterCat) return false;
+    if (filterPrice === 'free' && !isFree(e.price)) return false;
+    if (filterPrice === 'paid' &&  isFree(e.price)) return false;
+    if (filterWhen === 'today' && !eventOverlaps(e, todayDate, todayDate)) return false;
+    if (filterWhen === 'week'  && !eventOverlaps(e, todayDate, weekEnd))  return false;
+    if (filterWhen === 'month' && !eventOverlaps(e, todayDate, monthEnd)) return false;
+    return true;
+  });
+}
+function sortEvents(arr) {
+  return [...arr].sort((a,b) => {
+    let av, bv;
+    if (sortCol === 'date') { av=a.dateStart; bv=b.dateStart; }
+    else if (sortCol === 'price') { av=parseFloat(a.price)||0; bv=parseFloat(b.price)||0; }
+    else { av=a[sortCol]||''; bv=b[sortCol]||''; }
+    if (av<bv) return -sortDir;
+    if (av>bv) return  sortDir;
+    return 0;
+  });
+}
+
+/* ── Render: multi-day card ──────────────────────────────── */
+function multidayCard(e) {
+  return `
+  <div class="cc-multiday-card">
+    <div class="cc-multiday-body">
+      <div class="cc-multiday-title">${e.title}</div>
+      <div class="cc-multiday-meta">${badge(e.category)}${e.venue?` · ${e.venue}`:''}${e.notes?` · ${e.notes}`:''}</div>
+    </div>
+    <div class="cc-multiday-right">
+      <div class="cc-multiday-range">${fmtRange(e)}</div>
+      <div class="cc-multiday-price ${isFree(e.price)?'free':''}">${fmtPrice(e.price)}</div>
+    </div>
+    ${e.link ? `<a href="${e.link}" target="_blank" rel="noopener" title="Više informacija" style="color:var(--ink-3);text-decoration:none;font-size:12px">↗</a>` : ''}
+  </div>`;
+}
+
+/* ── Render: table row ───────────────────────────────────── */
+function tableRow(e) {
+  return `
+    <tr>
+      <td class="cc-td-date">
+        <div class="day">${fmtDate(e.dateStart)}</div>
+        <div class="time">${e.time||''}</div>
+      </td>
+      <td class="cc-td-title">
+        <span class="title">${e.title}</span>
+        ${(e.genre||e.notes) ? `<span class="sub">${[e.genre,e.notes].filter(Boolean).join(' · ')}</span>` : ''}
+      </td>
+      <td class="cc-td-cat">${badge(e.category)}</td>
+      <td class="cc-td-venue">${e.venue||'—'}</td>
+      <td class="cc-td-price ${isFree(e.price)?'free':''}">${fmtPrice(e.price)}</td>
+      <td class="cc-td-link">${e.link?`<a href="${e.link}" target="_blank" rel="noopener" title="Info / ulaznice">↗</a>`:''}</td>
+    </tr>`;
+}
+
+/* ── Render public table ─────────────────────────────────── */
+function renderPublic() {
+  const all    = getFiltered();
+  const multi  = sortEvents(all.filter(isMultiDay));
+  const single = sortEvents(all.filter(e=>!isMultiDay(e)));
+
+  const mdWrap  = document.getElementById('cc-multiday-wrap');
+  const mdCont  = document.getElementById('cc-multiday');
+  const dlLabel = document.getElementById('cc-daily-label');
+  const tbody   = document.getElementById('cc-tbody');
+  const empty   = document.getElementById('cc-empty-table');
+
+  const hasMulti = multi.length>0, hasSingle = single.length>0;
+  mdWrap.style.display  = hasMulti ? 'block' : 'none';
+  dlLabel.style.display = (hasMulti && hasSingle) ? 'flex' : 'none';
+  mdCont.innerHTML = multi.map(multidayCard).join('');
+
+  if (!hasMulti && !hasSingle) { tbody.innerHTML=''; empty.style.display='block'; document.querySelector('#cc-panel-public .cc-table-scroll').style.display='none'; return; }
+  empty.style.display='none';
+  document.querySelector('#cc-panel-public .cc-table-scroll').style.display='block';
+  tbody.innerHTML = single.map(tableRow).join('');
+}
+
+/* ── Render admin list (compact, edit/delete only) ───────── */
+function renderAdminTable() {
+  const list = document.getElementById('cc-admin-list');
+  const empty = document.getElementById('cc-empty-table-a');
+  const count = document.getElementById('cc-admin-count');
+  const sorted = [...events].sort((a,b)=>a.dateStart<b.dateStart?-1:1);
+  count.textContent = `${sorted.length} događaja`;
+
+  if (!sorted.length) { list.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  list.innerHTML = sorted.map(e=>{
+    const multi2 = isMultiDay(e);
+    return `
+    <div class="cc-admin-row ${editId===e.id?'editing':''} ${multi2?'is-multiday':''}">
+      <div class="cc-admin-row-date" style="min-width:${multi2?90:55}px">${fmtRange(e)}</div>
+      ${badge(e.category)}
+      <div class="cc-admin-row-title" title="${e.title}">${e.title}</div>
+      <div class="cc-admin-row-actions">
+        <button class="cc-icon-btn" onclick="ccEditEvent(${e.id})" title="Uredi">✎</button>
+        <button class="cc-icon-btn del" onclick="ccDeleteEvent(${e.id})" title="Obriši">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function ccRefresh() { renderPublic(); }
+
+/* ── Tabs ────────────────────────────────────────────────── */
+window.ccSwitchPanel = function(panel) {
+  document.getElementById('cc-panel-public').style.display = panel==='public' ? 'block' : 'none';
+  document.getElementById('cc-panel-admin').style.display  = panel==='admin'  ? 'block' : 'none';
+  document.getElementById('cc-tab-public').classList.toggle('active', panel==='public');
+  document.getElementById('cc-tab-admin').classList.toggle('active',  panel==='admin');
+  if (panel==='admin') renderAdminTable();
+};
+
+/* ── Sort ────────────────────────────────────────────────── */
+document.getElementById('cc-sort-row').addEventListener('click', e=>{
+  const pill = e.target.closest('.cc-sort-pill');
+  if (!pill) return;
+  const col = pill.dataset.sort;
+  if (sortCol===col) sortDir*=-1; else { sortCol=col; sortDir=1; }
+  document.querySelectorAll('#cc-sort-row .cc-sort-pill').forEach(p=>p.classList.toggle('active', p.dataset.sort===col));
+  ['date','title','category','price'].forEach(c=>{
+    const el=document.getElementById('cc-arr-'+c);
+    if(el) el.textContent = sortDir===1 ? '▲' : '▼';
+  });
+  ccRefresh();
+});
+
+/* ── Category chips ──────────────────────────────────────── */
+document.getElementById('cc-cat-chips').addEventListener('click', e=>{
+  const chip=e.target.closest('.cc-chip');
+  if(!chip) return;
+  filterCat=chip.dataset.cat;
+  document.querySelectorAll('#cc-cat-chips .cc-chip').forEach(c=>c.classList.toggle('active', c.dataset.cat===filterCat));
+  ccRefresh();
+});
+
+/* ── Price / when selects ─────────────────────────────────── */
+document.getElementById('cc-filter-price').addEventListener('change', function(){ filterPrice=this.value; ccRefresh(); });
+document.getElementById('cc-filter-when').addEventListener('change', function(){ filterWhen=this.value; ccRefresh(); });
+
+/* ── Date hint ───────────────────────────────────────────── */
+window.ccOnDateChange = function() {
+  const s = document.getElementById('cc-f-date-start').value;
+  const e = document.getElementById('cc-f-date-end').value;
+  const hint = document.getElementById('cc-date-hint');
+  if (s && e && e > s) {
+    const ms=toDate(s), me=toDate(e);
+    const days = Math.round((me-ms)/(1000*60*60*24))+1;
+    hint.textContent = `Višednevni događaj · ${days} dana (${fmtRange({dateStart:s,dateEnd:e})})`;
+    hint.style.color = 'var(--gold)';
+  } else if (s && e && e <= s) {
+    hint.textContent = 'Datum kraja mora biti nakon datuma početka.';
+    hint.style.color = 'var(--accent)';
+  } else {
+    hint.textContent = s ? 'Jednodnevni događaj — dodaj datum kraja za višednevni.' : '';
+    hint.style.color = 'var(--ink-3)';
+  }
+};
+
+/* ── Save / edit / delete ────────────────────────────────── */
+window.ccSaveEvent = function() {
+  const title = document.getElementById('cc-f-title').value.trim();
+  const start = document.getElementById('cc-f-date-start').value;
+  const end   = document.getElementById('cc-f-date-end').value;
+  if (!title) { ccShake('cc-f-title'); ccToast('Naziv događaja je obavezan'); return; }
+  if (!start) { ccShake('cc-f-date-start'); ccToast('Datum početka je obavezan'); return; }
+  if (end && end <= start) { ccShake('cc-f-date-end'); ccToast('Datum kraja mora biti nakon datuma početka'); return; }
+
+  const ev = {
+    id: editId || nextId++,
+    title,
+    category: document.getElementById('cc-f-cat').value,
+    genre: document.getElementById('cc-f-genre').value.trim(),
+    dateStart: start,
+    dateEnd: (end && end > start) ? end : '',
+    time: document.getElementById('cc-f-time').value,
+    venue: document.getElementById('cc-f-venue').value.trim(),
+    price: parseFloat(document.getElementById('cc-f-price').value)||0,
+    link: document.getElementById('cc-f-link').value.trim(),
+    notes: document.getElementById('cc-f-notes').value.trim(),
+  };
+
+  if (editId) { const i=events.findIndex(e=>e.id===editId); if(i>-1) events[i]=ev; }
+  else events.push(ev);
+
+  const wasEdit = !!editId;
+  editId=null;
+  save();
+  ccResetForm();
+  renderAdminTable();
+  ccRefresh();
+  ccToast(wasEdit ? 'Događaj ažuriran' : 'Događaj spremljen');
+};
+
+window.ccEditEvent = function(id) {
+  const e = events.find(x=>x.id===id);
+  if(!e) return;
+  editId=id;
+  document.getElementById('cc-f-title').value = e.title;
+  document.getElementById('cc-f-cat').value = e.category;
+  document.getElementById('cc-f-genre').value = e.genre||'';
+  document.getElementById('cc-f-date-start').value = e.dateStart||'';
+  document.getElementById('cc-f-date-end').value = e.dateEnd||'';
+  document.getElementById('cc-f-time').value = e.time||'';
+  document.getElementById('cc-f-venue').value = e.venue||'';
+  document.getElementById('cc-f-price').value = e.price||'';
+  document.getElementById('cc-f-link').value = e.link||'';
+  document.getElementById('cc-f-notes').value = e.notes||'';
+  document.getElementById('cc-form-heading').textContent='Uredi događaj';
+  document.getElementById('cc-editing-banner').classList.add('visible');
+  ccOnDateChange();
+  renderAdminTable();
+};
+
+window.ccDeleteEvent = function(id) {
+  if (!confirm('Obrisati ovaj događaj? Ova radnja se ne može poništiti.')) return;
+  events = events.filter(e=>e.id!==id);
+  if (editId===id) ccCancelEdit();
+  save();
+  renderAdminTable();
+  ccRefresh();
+  ccToast('Događaj obrisan');
+};
+
+window.ccResetForm = function() {
+  editId=null;
+  ['cc-f-title','cc-f-genre','cc-f-date-start','cc-f-date-end','cc-f-time','cc-f-venue','cc-f-price','cc-f-link','cc-f-notes']
+    .forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cc-f-cat').value='koncert';
+  document.getElementById('cc-form-heading').textContent='Dodaj događaj';
+  document.getElementById('cc-editing-banner').classList.remove('visible');
+  document.getElementById('cc-date-hint').textContent='';
+};
+window.ccCancelEdit = function() { ccResetForm(); renderAdminTable(); };
+
+/* ── Toast ───────────────────────────────────────────────── */
+let toastTimer;
+function ccToast(msg) {
+  const t=document.getElementById('cc-toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function ccShake(id) {
+  const el=document.getElementById(id);
+  el.style.borderColor='var(--accent)';
+  setTimeout(()=>el.style.borderColor='',1400);
+}
+
+/* ── Init ────────────────────────────────────────────────── */
+load();
+ccRefresh();
+
+})();
+</script>
+
+</body>
+</html>
