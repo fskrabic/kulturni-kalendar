@@ -221,6 +221,7 @@ html, body { overflow-x: hidden; max-width: 100%; }
 .cc-multiday-range { font-size: 10.5px; font-weight: 700; color: var(--gold); white-space: nowrap; }
 .cc-multiday-price { font-size: 11px; font-weight: 600; color: var(--ink-2); margin-top: 1px; }
 .cc-multiday-price.free { color: var(--green); }
+.cc-multiday-price.donation { color: var(--gold); }
 
 /* ── Table ────────────────────────────────────────────────── */
 .cc-table-scroll {
@@ -259,6 +260,7 @@ html, body { overflow-x: hidden; max-width: 100%; }
 .cc-td-venue { font-size: 12px; color: var(--ink-2); min-width: 100px; }
 .cc-td-price { white-space: nowrap; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
 .cc-td-price.free { color: var(--green); }
+.cc-td-price.donation { color: var(--gold); font-weight: 600; }
 .cc-td-link { text-align: center; }
 .cc-td-link a { color: var(--ink-3); font-size: 13px; transition: color 0.12s; text-decoration: none; }
 .cc-td-link a:hover { color: var(--accent); }
@@ -342,6 +344,27 @@ html, body { overflow-x: hidden; max-width: 100%; }
 .cc-date-hint { font-size: 10.5px; color: var(--ink-3); margin-top: -4px; margin-bottom: 9px; min-height: 13px; }
 
 .cc-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.cc-checkbox-group { margin-top: -4px; }
+.cc-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--ink);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.cc-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--gold);
+}
+.cc-checkbox-label .opt { font-weight: 400; color: var(--ink-3); }
 
 .cc-btn-row { display: flex; gap: 6px; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--rule); }
 .cc-btn { height: 32px; padding: 0 12px; border-radius: var(--radius); font-family: var(--font-sans); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.12s; white-space: nowrap; }
@@ -440,13 +463,15 @@ html, body { overflow-x: hidden; max-width: 100%; }
           <select id="cc-filter-price" onchange="ccRefresh()">
             <option value="">Sve cijene</option>
             <option value="free">Besplatno</option>
-            <option value="paid">Plaćeno</option>
+            <option value="paid">Uz ulaznicu</option>
+            <option value="donation">Dobrovoljna donacija</option>
           </select>
           <select id="cc-filter-when" onchange="ccRefresh()">
             <option value="">Svi datumi</option>
             <option value="today">Danas</option>
             <option value="week">Ovaj tjedan</option>
             <option value="month">Ovaj mjesec</option>
+            <option value="nextmonth">Sljedeći mjesec</option>
           </select>
         </div>
 
@@ -490,7 +515,7 @@ html, body { overflow-x: hidden; max-width: 100%; }
                 <th>Kategorija</th>
                 <th>Lokacija</th>
                 <th style="text-align:right">Cijena</th>
-                <th></th>
+                <th>Link</th>
               </tr>
             </thead>
             <tbody id="cc-tbody"></tbody>
@@ -564,7 +589,7 @@ html, body { overflow-x: hidden; max-width: 100%; }
           <div class="cc-date-hint" id="cc-date-hint"></div>
 
           <div class="cc-form-group">
-            <label for="cc-f-time">Vrijeme <span class="opt">(za jednodnevni ili dnevno otvorenje)</span></label>
+            <label for="cc-f-time">Vrijeme <span class="opt">(za jednodnevno ili dnevno otvorenje)</span></label>
             <input id="cc-f-time" type="time">
           </div>
 
@@ -575,13 +600,20 @@ html, body { overflow-x: hidden; max-width: 100%; }
 
           <div class="cc-form-row">
             <div class="cc-form-group">
-              <label for="cc-f-price">Cijena (€) — 0 za besplatno</label>
+              <label for="cc-f-price">Cijena (€) - 0 za besplatno</label>
               <input id="cc-f-price" type="number" min="0" step="0.5" placeholder="0">
             </div>
             <div class="cc-form-group">
               <label for="cc-f-link">Link za ulaznice / info</label>
               <input id="cc-f-link" type="url" placeholder="https://…">
             </div>
+          </div>
+
+          <div class="cc-form-group cc-checkbox-group">
+            <label class="cc-checkbox-label">
+              <input id="cc-f-donation" type="checkbox">
+              <span>Dobrovoljna donacija <span class="opt">(umjesto fiksne cijene ulaznice)</span></span>
+            </label>
           </div>
 
           <div class="cc-form-group">
@@ -604,18 +636,18 @@ html, body { overflow-x: hidden; max-width: 100%; }
 <script>
 
 /* ── Data ────────────────────────────────────────────────── */
-const STORAGE_KEY = 'kulturni-kalendar-v3';
+const STORAGE_KEY = 'kulturni-kalendar-v4';
 
 const SAMPLE = [
-  {id:1,  title:'Naziv događaja 1',  category:'koncert',   genre:'Žanr A', dateStart:'2025-07-04', dateEnd:'',           time:'20:00', venue:'Lokacija 1', price:13, link:'', notes:''},
-  {id:2,  title:'Naziv događaja 2',  category:'koncert',   genre:'Žanr B', dateStart:'2025-07-05', dateEnd:'2025-07-07', time:'17:00', venue:'Lokacija 2', price:0,  link:'', notes:'Napomena uz događaj'},
-  {id:3,  title:'Naziv događaja 3',  category:'film',      genre:'Žanr C', dateStart:'2025-07-06', dateEnd:'',           time:'20:30', venue:'Lokacija 3', price:9,  link:'', notes:''},
-  {id:4,  title:'Naziv događaja 4',  category:'film',      genre:'Žanr D', dateStart:'2025-07-07', dateEnd:'',           time:'18:00', venue:'Lokacija 4', price:5,  link:'', notes:''},
-  {id:5,  title:'Naziv događaja 5',  category:'kazaliste', genre:'Žanr E', dateStart:'2025-07-08', dateEnd:'',           time:'19:30', venue:'Lokacija 5', price:20, link:'', notes:''},
-  {id:6,  title:'Naziv događaja 6',  category:'radionica', genre:'Žanr F', dateStart:'2025-07-09', dateEnd:'',           time:'11:00', venue:'Lokacija 6', price:25, link:'https://example.com', notes:''},
-  {id:7,  title:'Naziv događaja 7',  category:'izlozba',   genre:'Žanr G', dateStart:'2025-07-02', dateEnd:'2025-07-31', time:'10:00', venue:'Lokacija 7', price:0,  link:'', notes:'Otvoreno uto–ned, 10–20h'},
-  {id:8,  title:'Naziv događaja 8',  category:'koncert',   genre:'Žanr H', dateStart:'2025-07-11', dateEnd:'',           time:'20:00', venue:'Lokacija 8', price:35, link:'', notes:''},
-  {id:9,  title:'Naziv događaja 9',  category:'ostalo',    genre:'Žanr I', dateStart:'2025-07-01', dateEnd:'2025-07-31', time:'',      venue:'Lokacija 9', price:0,  link:'', notes:'Program se mijenja svaki dan'},
+  {id:1,  title:'Naziv događaja 1',  category:'koncert',   genre:'Žanr A', dateStart:'2026-07-04', dateEnd:'',           time:'20:00', venue:'Lokacija 1', price:13, donation:false, link:'https://h-alter.org', notes:''},
+  {id:2,  title:'Naziv događaja 2',  category:'koncert',   genre:'Žanr B', dateStart:'2026-07-05', dateEnd:'2026-07-07', time:'17:00', venue:'Lokacija 2', price:0,  donation:true,  link:'https://h-alter.org', notes:'Napomena uz događaj'},
+  {id:3,  title:'Naziv događaja 3',  category:'film',      genre:'Žanr C', dateStart:'2026-07-06', dateEnd:'',           time:'20:30', venue:'Lokacija 3', price:9,  donation:false, link:'https://h-alter.org', notes:''},
+  {id:4,  title:'Naziv događaja 4',  category:'film',      genre:'Žanr D', dateStart:'2026-06-30', dateEnd:'',           time:'18:00', venue:'Lokacija 4', price:5,  donation:false, link:'https://h-alter.org', notes:''},
+  {id:5,  title:'Naziv događaja 5',  category:'kazaliste', genre:'Žanr E', dateStart:'2026-07-08', dateEnd:'',           time:'19:30', venue:'Lokacija 5', price:0,  donation:true,  link:'https://h-alter.org', notes:'Ulaz slobodan, prilozi dobrodošli'},
+  {id:6,  title:'Naziv događaja 6',  category:'radionica', genre:'Žanr F', dateStart:'2026-07-09', dateEnd:'',           time:'11:00', venue:'Lokacija 6', price:25, donation:false, notes:''},
+  {id:7,  title:'Naziv događaja 7',  category:'izlozba',   genre:'Žanr G', dateStart:'2026-07-02', dateEnd:'2026-07-31', time:'10:00', venue:'Lokacija 7', price:0,  donation:false, link:'https://h-alter.org', notes:'Otvoreno uto–ned, 10–20h'},
+  {id:8,  title:'Naziv događaja 8',  category:'koncert',   genre:'Žanr H', dateStart:'2026-07-11', dateEnd:'',           time:'20:00', venue:'Lokacija 8', price:35, donation:false, link:'', notes:''},
+  {id:9,  title:'Naziv događaja 9',  category:'ostalo',    genre:'Žanr I', dateStart:'2026-07-01', dateEnd:'2026-07-31', time:'',      venue:'Lokacija 9', price:0,  donation:false, link:'', notes:'Program se mijenja svaki dan'},
 ];
 
 let events = [];
@@ -668,7 +700,11 @@ function fmtRange(e) {
   if (ms === me) return `${ds}.–${de}. ${MONTH_HR[ms-1]}`;
   return `${ds}. ${MONTH_HR[ms-1]} – ${de}. ${MONTH_HR[me-1]}`;
 }
-function fmtPrice(p) { return (!p || parseFloat(p)===0) ? 'Besplatno' : `${parseFloat(p)}€`; }
+function fmtPrice(e) {
+  if (e && e.donation) return 'Dobrovoljna donacija';
+  const p = e && typeof e === 'object' ? e.price : e;
+  return (!p || parseFloat(p)===0) ? 'Besplatno' : `${parseFloat(p)}€`;
+}
 function isFree(p) { return !p || parseFloat(p)===0; }
 function badge(cat) { return `<span class="cc-badge cc-badge-${cat}">${CAT_LABEL[cat]||cat}</span>`; }
 
@@ -685,17 +721,23 @@ function getFiltered() {
   const weekEnd  = new Date(todayDate); weekEnd.setDate(weekEnd.getDate()+6);
   const monthEnd = new Date(todayDate); monthEnd.setMonth(monthEnd.getMonth()+1); monthEnd.setDate(monthEnd.getDate()-1);
 
+  // "Next month" = the next full calendar month (e.g. if today is in June, all of July)
+  const nextMonthStart = new Date(todayDate.getFullYear(), todayDate.getMonth()+1, 1);
+  const nextMonthEnd   = new Date(todayDate.getFullYear(), todayDate.getMonth()+2, 0);
+
   return events.filter(e => {
     if (q) {
       const hay = `${e.title} ${e.venue} ${e.genre} ${e.notes}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     if (filterCat && e.category !== filterCat) return false;
-    if (filterPrice === 'free' && !isFree(e.price)) return false;
-    if (filterPrice === 'paid' &&  isFree(e.price)) return false;
-    if (filterWhen === 'today' && !eventOverlaps(e, todayDate, todayDate)) return false;
-    if (filterWhen === 'week'  && !eventOverlaps(e, todayDate, weekEnd))  return false;
-    if (filterWhen === 'month' && !eventOverlaps(e, todayDate, monthEnd)) return false;
+    if (filterPrice === 'free'     && !isFree(e.price))                 return false;
+    if (filterPrice === 'paid'     && (isFree(e.price) || e.donation))  return false;
+    if (filterPrice === 'donation' && !e.donation)                      return false;
+    if (filterWhen === 'today'     && !eventOverlaps(e, todayDate, todayDate))         return false;
+    if (filterWhen === 'week'      && !eventOverlaps(e, todayDate, weekEnd))           return false;
+    if (filterWhen === 'month'     && !eventOverlaps(e, todayDate, monthEnd))          return false;
+    if (filterWhen === 'nextmonth' && !eventOverlaps(e, nextMonthStart, nextMonthEnd)) return false;
     return true;
   });
 }
@@ -721,7 +763,7 @@ function multidayCard(e) {
     </div>
     <div class="cc-multiday-right">
       <div class="cc-multiday-range">${fmtRange(e)}</div>
-      <div class="cc-multiday-price ${isFree(e.price)?'free':''}">${fmtPrice(e.price)}</div>
+      <div class="cc-multiday-price ${isFree(e.price)&&!e.donation?'free':''} ${e.donation?'donation':''}">${fmtPrice(e)}</div>
     </div>
     ${e.link ? `<a href="${e.link}" target="_blank" rel="noopener" title="Više informacija" style="color:var(--ink-3);text-decoration:none;font-size:12px">↗</a>` : ''}
   </div>`;
@@ -741,7 +783,7 @@ function tableRow(e) {
       </td>
       <td class="cc-td-cat">${badge(e.category)}</td>
       <td class="cc-td-venue">${e.venue||'—'}</td>
-      <td class="cc-td-price ${isFree(e.price)?'free':''}">${fmtPrice(e.price)}</td>
+      <td class="cc-td-price ${isFree(e.price)&&!e.donation?'free':''} ${e.donation?'donation':''}">${fmtPrice(e)}</td>
       <td class="cc-td-link">${e.link?`<a href="${e.link}" target="_blank" rel="noopener" title="Info / ulaznice">↗</a>`:''}</td>
     </tr>`;
 }
@@ -871,6 +913,7 @@ window.ccSaveEvent = function() {
     time: document.getElementById('cc-f-time').value,
     venue: document.getElementById('cc-f-venue').value.trim(),
     price: parseFloat(document.getElementById('cc-f-price').value)||0,
+    donation: document.getElementById('cc-f-donation').checked,
     link: document.getElementById('cc-f-link').value.trim(),
     notes: document.getElementById('cc-f-notes').value.trim(),
   };
@@ -899,6 +942,7 @@ window.ccEditEvent = function(id) {
   document.getElementById('cc-f-time').value = e.time||'';
   document.getElementById('cc-f-venue').value = e.venue||'';
   document.getElementById('cc-f-price').value = e.price||'';
+  document.getElementById('cc-f-donation').checked = !!e.donation;
   document.getElementById('cc-f-link').value = e.link||'';
   document.getElementById('cc-f-notes').value = e.notes||'';
   document.getElementById('cc-form-heading').textContent='Uredi događaj';
@@ -921,6 +965,7 @@ window.ccResetForm = function() {
   editId=null;
   ['cc-f-title','cc-f-genre','cc-f-date-start','cc-f-date-end','cc-f-time','cc-f-venue','cc-f-price','cc-f-link','cc-f-notes']
     .forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cc-f-donation').checked = false;
   document.getElementById('cc-f-cat').value='koncert';
   document.getElementById('cc-form-heading').textContent='Dodaj događaj';
   document.getElementById('cc-editing-banner').classList.remove('visible');
