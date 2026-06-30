@@ -40,7 +40,11 @@
   border-radius: 8px;
   padding: 1.25rem;
   max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
+
+html, body { overflow-x: hidden; max-width: 100%; }
 
 .cc-widget * { box-sizing: border-box; }
 
@@ -74,8 +78,11 @@
   grid-template-columns: 1fr 300px;
   gap: 1.25rem;
   align-items: start;
+  width: 100%;
+  min-width: 0;
 }
 .cc-layout.admin-hidden { grid-template-columns: 1fr; }
+.cc-layout > div { min-width: 0; }
 
 /* ── Filter bar ───────────────────────────────────────────── */
 .cc-filter-bar {
@@ -391,6 +398,27 @@
   .cc-layout { grid-template-columns: 1fr; }
   .cc-date-range-row { grid-template-columns: 1fr; }
   .cc-date-sep { display: none; }
+
+  /* Tighten the table so less horizontal scroll is needed on phones */
+  .cc-td-date { min-width: 56px; font-size: 11px; }
+  .cc-td-date .day { font-size: 11.5px; }
+  .cc-td-title { min-width: 120px; }
+  .cc-td-title .title { font-size: 12.5px; }
+  .cc-td-venue { min-width: 70px; font-size: 11px; }
+  .cc-table thead th,
+  .cc-table tbody td { padding: 7px 7px; }
+
+  /* Multi-day cards stack full-width instead of trying to fit side by side */
+  .cc-multiday-card { min-width: 100%; max-width: 100%; }
+
+  /* Filters wrap naturally and don't force extra width */
+  .cc-filter-bar input[type="text"] { min-width: 100%; }
+  .cc-filter-bar select { flex: 1; min-width: 0; }
+}
+
+@media (max-width: 480px) {
+  .cc-td-venue { display: none; }
+  .cc-table thead th:nth-child(4) { display: none; }
 }
 </style>
 </head>
@@ -462,7 +490,7 @@
                 <th>Kategorija</th>
                 <th>Lokacija</th>
                 <th style="text-align:right">Cijena</th>
-                <th>Link</th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="cc-tbody"></tbody>
